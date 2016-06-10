@@ -1,6 +1,8 @@
-var AnimatedValue, Animation, Easing, LazyVar, Type, ref, type;
+var AnimatedValue, Animation, Easing, LazyVar, Type, getArgProp, ref, type;
 
 ref = require("Animated"), AnimatedValue = ref.AnimatedValue, Animation = ref.Animation;
+
+getArgProp = require("getArgProp");
 
 LazyVar = require("lazy-var");
 
@@ -25,18 +27,10 @@ type.optionDefaults = {
 };
 
 type.defineFrozenValues({
-  endValue: function(options) {
-    return options.endValue;
-  },
-  duration: function(options) {
-    return options.duration;
-  },
-  easing: function(options) {
-    return options.easing;
-  },
-  delay: function(options) {
-    return options.delay;
-  },
+  endValue: getArgProp("endValue"),
+  duration: getArgProp("duration"),
+  easing: getArgProp("easing"),
+  delay: getArgProp("delay"),
   _velocity: function() {
     return LazyVar((function(_this) {
       return function() {
@@ -73,7 +67,10 @@ type.defineMethods({
       return this.easing(1);
     }
     return this.easing(time / this.duration);
-  },
+  }
+});
+
+type.overrideMethods({
   __computeValue: function() {
     this._lastTime = this.time;
     this._lastValue = this.value;
