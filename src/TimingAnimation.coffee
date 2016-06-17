@@ -1,8 +1,8 @@
 
-{ AnimatedValue, Animation } = require "Animated"
+{ Animation } = require "Animated"
 
 getArgProp = require "getArgProp"
-LazyVar = require "lazy-var"
+LazyVar = require "LazyVar"
 Easing = require "easing"
 Type = require "Type"
 
@@ -35,6 +35,8 @@ type.defineFrozenValues
 
 type.defineValues
 
+  progress: 0
+
   time: null
 
   value: null
@@ -54,14 +56,21 @@ type.defineMethods
   computeValueAtProgress: (progress) ->
     @startValue + progress * (@endValue - @startValue)
 
-  computeValueAtTime: (time) ->
-    progress = @computeProgressAtTime time
-    @computeValueAtProgress progress
-
   computeProgressAtTime: (time) ->
     return @easing 0 if time <= 0
     return @easing 1 if time >= @duration
     return @easing time / @duration
+
+  _start: ->
+
+    @_timer = null
+    if @duration is 0
+      @_onUpdate @computeValueAtProgress 1
+      @finish()
+      return
+
+    @startTime = Date.now()
+    @_requestAnimationFrame()
 
 type.overrideMethods
 
@@ -69,32 +78,25 @@ type.overrideMethods
 
     @_lastTime = @time
     @_lastValue = @value
-
-    @time = Math.min @duration, Date.now() - @startTime
-    @value = @computeValueAtTime @time
-
     @_velocity.reset()
 
-    return @value
+    @time = Math.min @duration, Date.now() - @startTime
+    @progress = @computeProgressAtTime @time
+    return @value = @computeValueAtProgress @progress
 
-  __didComputeValue: (value) ->
+  __didStart: ->
+    return @_start() if @delay <= 0
+    @_timer = Timer @delay, => @_start()
+
+  __didUpdate: (value) ->
     @finish() if @time is @duration
 
-  __onStart: ->
-    if @delay > 0
-      @_timer = Timer @delay, => @__onStart()
-    else
-      @_timer = null
-      if @duration is 0
-        @_onUpdate @computeValueAtProgress 1
-        @finish()
-      else
-        @startTime = Date.now()
-        @_requestAnimationFrame()
-
-  __onEnd: ->
+  __didEnd: ->
     return unless @_timer
     @_timer.prevent()
     @_timer = null
+
+  __captureFrame: ->
+    { @progress, @value, @time }
 
 module.exports = type.build()

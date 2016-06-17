@@ -1,10 +1,10 @@
-var AnimatedValue, Animation, Easing, LazyVar, Type, getArgProp, ref, type;
+var Animation, Easing, LazyVar, Type, getArgProp, type;
 
-ref = require("Animated"), AnimatedValue = ref.AnimatedValue, Animation = ref.Animation;
+Animation = require("Animated").Animation;
 
 getArgProp = require("getArgProp");
 
-LazyVar = require("lazy-var");
+LazyVar = require("LazyVar");
 
 Easing = require("easing");
 
@@ -41,6 +41,7 @@ type.defineFrozenValues({
 });
 
 type.defineValues({
+  progress: 0,
   time: null,
   value: null,
   _timer: null,
@@ -54,11 +55,6 @@ type.defineMethods({
   computeValueAtProgress: function(progress) {
     return this.startValue + progress * (this.endValue - this.startValue);
   },
-  computeValueAtTime: function(time) {
-    var progress;
-    progress = this.computeProgressAtTime(time);
-    return this.computeValueAtProgress(progress);
-  },
   computeProgressAtTime: function(time) {
     if (time <= 0) {
       return this.easing(0);
@@ -67,6 +63,16 @@ type.defineMethods({
       return this.easing(1);
     }
     return this.easing(time / this.duration);
+  },
+  _start: function() {
+    this._timer = null;
+    if (this.duration === 0) {
+      this._onUpdate(this.computeValueAtProgress(1));
+      this.finish();
+      return;
+    }
+    this.startTime = Date.now();
+    return this._requestAnimationFrame();
   }
 });
 
@@ -74,40 +80,39 @@ type.overrideMethods({
   __computeValue: function() {
     this._lastTime = this.time;
     this._lastValue = this.value;
-    this.time = Math.min(this.duration, Date.now() - this.startTime);
-    this.value = this.computeValueAtTime(this.time);
     this._velocity.reset();
-    return this.value;
+    this.time = Math.min(this.duration, Date.now() - this.startTime);
+    this.progress = this.computeProgressAtTime(this.time);
+    return this.value = this.computeValueAtProgress(this.progress);
   },
-  __didComputeValue: function(value) {
+  __didStart: function() {
+    if (this.delay <= 0) {
+      return this._start();
+    }
+    return this._timer = Timer(this.delay, (function(_this) {
+      return function() {
+        return _this._start();
+      };
+    })(this));
+  },
+  __didUpdate: function(value) {
     if (this.time === this.duration) {
       return this.finish();
     }
   },
-  __onStart: function() {
-    if (this.delay > 0) {
-      return this._timer = Timer(this.delay, (function(_this) {
-        return function() {
-          return _this.__onStart();
-        };
-      })(this));
-    } else {
-      this._timer = null;
-      if (this.duration === 0) {
-        this._onUpdate(this.computeValueAtProgress(1));
-        return this.finish();
-      } else {
-        this.startTime = Date.now();
-        return this._requestAnimationFrame();
-      }
-    }
-  },
-  __onEnd: function() {
+  __didEnd: function() {
     if (!this._timer) {
       return;
     }
     this._timer.prevent();
     return this._timer = null;
+  },
+  __captureFrame: function() {
+    return {
+      progress: this.progress,
+      value: this.value,
+      time: this.time
+    };
   }
 });
 
