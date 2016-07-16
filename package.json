@@ -7,7 +7,7 @@
     "LazyVar": "aleclarson/LazyVar#2.0.0",
     "Type": "aleclarson/Type#1.0.0",
     "easing": "aleclarson/easing#1.0.0",
-    "getArgProp": "aleclarson/getArgProp#1.0.0"
+    "fromArgs": "aleclarson/fromArgs#1.0.0"
   },
   "lotus": {
     "plugins": [

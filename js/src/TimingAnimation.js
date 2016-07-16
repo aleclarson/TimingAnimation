@@ -1,8 +1,8 @@
-var Animation, Easing, LazyVar, Type, getArgProp, type;
+var Animation, Easing, LazyVar, Type, fromArgs, type;
 
 Animation = require("Animated").Animation;
 
-getArgProp = require("getArgProp");
+fromArgs = require("fromArgs");
 
 LazyVar = require("LazyVar");
 
@@ -27,10 +27,10 @@ type.optionDefaults = {
 };
 
 type.defineFrozenValues({
-  endValue: getArgProp("endValue"),
-  duration: getArgProp("duration"),
-  easing: getArgProp("easing"),
-  delay: getArgProp("delay"),
+  endValue: fromArgs("endValue"),
+  duration: fromArgs("duration"),
+  easing: fromArgs("easing"),
+  delay: fromArgs("delay"),
   _velocity: function() {
     return LazyVar((function(_this) {
       return function() {
@@ -118,4 +118,4 @@ type.overrideMethods({
 
 module.exports = type.build();
 
-//# sourceMappingURL=../../map/src/TimingAnimation.map
+//# sourceMappingURL=map/TimingAnimation.map

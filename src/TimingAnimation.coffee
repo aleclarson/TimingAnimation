@@ -1,7 +1,7 @@
 
 { Animation } = require "Animated"
 
-getArgProp = require "getArgProp"
+fromArgs = require "fromArgs"
 LazyVar = require "LazyVar"
 Easing = require "easing"
 Type = require "Type"
@@ -22,13 +22,13 @@ type.optionDefaults =
 
 type.defineFrozenValues
 
-  endValue: getArgProp "endValue"
+  endValue: fromArgs "endValue"
 
-  duration: getArgProp "duration"
+  duration: fromArgs "duration"
 
-  easing: getArgProp "easing"
+  easing: fromArgs "easing"
 
-  delay: getArgProp "delay"
+  delay: fromArgs "delay"
 
   _velocity: -> LazyVar =>
     (@value - @_lastValue) / (@time - @_lastTime)
