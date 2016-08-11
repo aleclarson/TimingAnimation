@@ -1,8 +1,6 @@
-var Animation, Easing, LazyVar, Type, fromArgs, type;
+var Animation, Easing, LazyVar, Type, type;
 
 Animation = require("Animated").Animation;
-
-fromArgs = require("fromArgs");
 
 LazyVar = require("LazyVar");
 
@@ -14,30 +12,25 @@ type = Type("TimingAnimation");
 
 type.inherits(Animation);
 
-type.optionTypes = {
-  endValue: Number,
-  duration: Number,
-  easing: Function,
-  delay: Number
-};
+type.defineOptions({
+  endValue: Number.isRequired,
+  duration: Number.isRequired,
+  easing: Function.withDefault(Easing("linear")),
+  delay: Number.withDefault(0)
+});
 
-type.optionDefaults = {
-  easing: Easing("linear"),
-  delay: 0
-};
-
-type.defineFrozenValues({
-  endValue: fromArgs("endValue"),
-  duration: fromArgs("duration"),
-  easing: fromArgs("easing"),
-  delay: fromArgs("delay"),
-  _velocity: function() {
-    return LazyVar((function(_this) {
+type.defineFrozenValues(function(options) {
+  return {
+    endValue: options.endValue,
+    duration: options.duration,
+    easing: options.easing,
+    delay: options.delay,
+    _velocity: LazyVar((function(_this) {
       return function() {
         return (_this.value - _this._lastValue) / (_this.time - _this._lastTime);
       };
-    })(this));
-  }
+    })(this))
+  };
 });
 
 type.defineValues({
@@ -49,7 +42,11 @@ type.defineValues({
   _lastValue: null
 });
 
-type.exposeLazyGetters(["velocity"]);
+type.defineGetters({
+  velocity: function() {
+    return this._velocity.get();
+  }
+});
 
 type.defineMethods({
   computeValueAtProgress: function(progress) {

@@ -1,7 +1,6 @@
 
 { Animation } = require "Animated"
 
-fromArgs = require "fromArgs"
 LazyVar = require "LazyVar"
 Easing = require "easing"
 Type = require "Type"
@@ -10,28 +9,23 @@ type = Type "TimingAnimation"
 
 type.inherits Animation
 
-type.optionTypes =
-  endValue: Number
-  duration: Number
-  easing: Function
-  delay: Number
+type.defineOptions
+  endValue: Number.isRequired
+  duration: Number.isRequired
+  easing: Function.withDefault Easing "linear"
+  delay: Number.withDefault 0
 
-type.optionDefaults =
-  easing: Easing "linear"
-  delay: 0
+type.defineFrozenValues (options) ->
 
-type.defineFrozenValues
+  endValue: options.endValue
 
-  endValue: fromArgs "endValue"
+  duration: options.duration
 
-  duration: fromArgs "duration"
+  easing: options.easing
 
-  easing: fromArgs "easing"
+  delay: options.delay
 
-  delay: fromArgs "delay"
-
-  _velocity: -> LazyVar =>
-    (@value - @_lastValue) / (@time - @_lastTime)
+  _velocity: LazyVar => (@value - @_lastValue) / (@time - @_lastTime)
 
 type.defineValues
 
@@ -47,9 +41,9 @@ type.defineValues
 
   _lastValue: null
 
-type.exposeLazyGetters [
-  "velocity"
-]
+type.defineGetters
+
+  velocity: -> @_velocity.get()
 
 type.defineMethods
 
