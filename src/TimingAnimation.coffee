@@ -35,11 +35,11 @@ type.defineValues
 
   value: null
 
-  _timer: null
-
   _lastTime: null
 
   _lastValue: null
+
+  _delayTimer: null
 
 type.defineGetters
 
@@ -57,13 +57,14 @@ type.defineMethods
 
   _start: ->
 
-    @_timer = null
+    @_delayTimer = null
     if @duration is 0
       @_onUpdate @computeValueAtProgress 1
       @finish()
       return
 
-    @startTime = Date.now()
+    @time = @startTime = Date.now()
+    @value = @startValue
     @_requestAnimationFrame()
 
 type.overrideMethods
@@ -80,17 +81,17 @@ type.overrideMethods
 
   __didStart: ->
     return @_start() if @delay <= 0
-    @_timer = Timer @delay, => @_start()
+    @_delayTimer = Timer @delay, => @_start()
 
   __didUpdate: (value) ->
     @finish() if @time is @duration
 
   __didEnd: ->
-    return unless @_timer
-    @_timer.prevent()
-    @_timer = null
+    return unless @_delayTimer
+    @_delayTimer.prevent()
+    @_delayTimer = null
 
   __captureFrame: ->
-    { @progress, @value, @time }
+    { @value, @time, @progress }
 
 module.exports = type.build()

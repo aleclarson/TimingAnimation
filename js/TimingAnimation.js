@@ -37,9 +37,9 @@ type.defineValues({
   progress: 0,
   time: null,
   value: null,
-  _timer: null,
   _lastTime: null,
-  _lastValue: null
+  _lastValue: null,
+  _delayTimer: null
 });
 
 type.defineGetters({
@@ -62,13 +62,14 @@ type.defineMethods({
     return this.easing(time / this.duration);
   },
   _start: function() {
-    this._timer = null;
+    this._delayTimer = null;
     if (this.duration === 0) {
       this._onUpdate(this.computeValueAtProgress(1));
       this.finish();
       return;
     }
-    this.startTime = Date.now();
+    this.time = this.startTime = Date.now();
+    this.value = this.startValue;
     return this._requestAnimationFrame();
   }
 });
@@ -86,7 +87,7 @@ type.overrideMethods({
     if (this.delay <= 0) {
       return this._start();
     }
-    return this._timer = Timer(this.delay, (function(_this) {
+    return this._delayTimer = Timer(this.delay, (function(_this) {
       return function() {
         return _this._start();
       };
@@ -98,17 +99,17 @@ type.overrideMethods({
     }
   },
   __didEnd: function() {
-    if (!this._timer) {
+    if (!this._delayTimer) {
       return;
     }
-    this._timer.prevent();
-    return this._timer = null;
+    this._delayTimer.prevent();
+    return this._delayTimer = null;
   },
   __captureFrame: function() {
     return {
-      progress: this.progress,
       value: this.value,
-      time: this.time
+      time: this.time,
+      progress: this.progress
     };
   }
 });
