@@ -15,7 +15,7 @@ type.inherits(Animation);
 type.defineOptions({
   endValue: Number.isRequired,
   duration: Number.isRequired,
-  easing: Function.withDefault(Easing("linear")),
+  easing: Function.withDefault(Easing.get("linear")),
   delay: Number.withDefault(0)
 });
 

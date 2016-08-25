@@ -6,7 +6,7 @@
     "Animated": "aleclarson/Animated#2.0.0",
     "LazyVar": "aleclarson/LazyVar#2.1.0",
     "Type": "aleclarson/Type#1.1.0",
-    "easing": "aleclarson/easing#1.0.0"
+    "easing": "aleclarson/easing#2.0.0"
   },
   "lotus": {
     "plugins": [
