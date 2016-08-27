@@ -1,10 +1,12 @@
-var Animation, Easing, LazyVar, Type, type;
+var Animation, Easing, LazyVar, Timer, Type, type;
 
 Animation = require("Animated").Animation;
 
 LazyVar = require("LazyVar");
 
 Easing = require("easing");
+
+Timer = require("timer");
 
 Type = require("Type");
 
@@ -49,10 +51,10 @@ type.defineGetters({
 });
 
 type.defineMethods({
-  computeValueAtProgress: function(progress) {
+  _valueAtProgress: function(progress) {
     return this.startValue + progress * (this.endValue - this.startValue);
   },
-  computeProgressAtTime: function(time) {
+  _progressAtTime: function(time) {
     if (time <= 0) {
       return this.easing(0);
     }
@@ -61,16 +63,16 @@ type.defineMethods({
     }
     return this.easing(time / this.duration);
   },
-  _start: function() {
+  _start: function(config) {
+    this.time = this.startTime = Date.now();
+    this.value = this.startValue = config.startValue;
     this._delayTimer = null;
-    if (this.duration === 0) {
-      this._onUpdate(this.computeValueAtProgress(1));
-      this.finish();
+    if (this.duration > 0) {
+      this._requestAnimationFrame();
       return;
     }
-    this.time = this.startTime = Date.now();
-    this.value = this.startValue;
-    return this._requestAnimationFrame();
+    this._onUpdate(this._valueAtProgress(1));
+    this.finish();
   }
 });
 
@@ -80,18 +82,19 @@ type.overrideMethods({
     this._lastValue = this.value;
     this._velocity.reset();
     this.time = Math.min(this.duration, Date.now() - this.startTime);
-    this.progress = this.computeProgressAtTime(this.time);
-    return this.value = this.computeValueAtProgress(this.progress);
+    this.progress = this._progressAtTime(this.time);
+    return this.value = this._valueAtProgress(this.progress);
   },
-  __didStart: function() {
-    if (this.delay <= 0) {
-      return this._start();
+  __didStart: function(config) {
+    if (this.delay > 0) {
+      return this._delayTimer = Timer(this.delay, (function(_this) {
+        return function() {
+          return _this._start(config);
+        };
+      })(this));
+    } else {
+      return this._start(config);
     }
-    return this._delayTimer = Timer(this.delay, (function(_this) {
-      return function() {
-        return _this._start();
-      };
-    })(this));
   },
   __didUpdate: function(value) {
     if (this.time === this.duration) {

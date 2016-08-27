@@ -1,8 +1,9 @@
 
-{ Animation } = require "Animated"
+{Animation} = require "Animated"
 
 LazyVar = require "LazyVar"
 Easing = require "easing"
+Timer = require "timer"
 Type = require "Type"
 
 type = Type "TimingAnimation"
@@ -47,25 +48,28 @@ type.defineGetters
 
 type.defineMethods
 
-  computeValueAtProgress: (progress) ->
+  _valueAtProgress: (progress) ->
     @startValue + progress * (@endValue - @startValue)
 
-  computeProgressAtTime: (time) ->
+  _progressAtTime: (time) ->
     return @easing 0 if time <= 0
     return @easing 1 if time >= @duration
     return @easing time / @duration
 
-  _start: ->
+  _start: (config) ->
+    @time = @startTime = Date.now()
+    @value = @startValue = config.startValue
 
     @_delayTimer = null
-    if @duration is 0
-      @_onUpdate @computeValueAtProgress 1
-      @finish()
+
+    if @duration > 0
+      @_requestAnimationFrame()
       return
 
-    @time = @startTime = Date.now()
-    @value = @startValue
-    @_requestAnimationFrame()
+    @_onUpdate @_valueAtProgress 1
+    @finish()
+    return
+
 
 type.overrideMethods
 
@@ -76,12 +80,13 @@ type.overrideMethods
     @_velocity.reset()
 
     @time = Math.min @duration, Date.now() - @startTime
-    @progress = @computeProgressAtTime @time
-    return @value = @computeValueAtProgress @progress
+    @progress = @_progressAtTime @time
+    return @value = @_valueAtProgress @progress
 
-  __didStart: ->
-    return @_start() if @delay <= 0
-    @_delayTimer = Timer @delay, => @_start()
+  __didStart: (config) ->
+    if @delay > 0
+      @_delayTimer = Timer @delay, => @_start config
+    else @_start config
 
   __didUpdate: (value) ->
     @finish() if @time is @duration
