@@ -2,16 +2,22 @@
   "name": "TimingAnimation",
   "version": "1.0.0",
   "main": "js/TimingAnimation",
+  "plugins": [
+    "lotus-coffee"
+  ],
+  "scripts": {
+    "build": "coffee -cb -o js src",
+    "postinstall": "postinstall-build js 'npm run build'"
+  },
   "dependencies": {
     "Animated": "aleclarson/Animated#2.0.0",
     "LazyVar": "aleclarson/LazyVar#2.1.0",
     "Type": "aleclarson/Type#1.1.0",
     "easing": "aleclarson/easing#2.0.0",
+    "postinstall-build": "0.2.x",
     "timer": "aleclarson/timer#2.0.0"
   },
-  "lotus": {
-    "plugins": [
-      "lotus-coffee"
-    ]
+  "devDependencies": {
+    "coffee-script": "1.9.x"
   }
 }
