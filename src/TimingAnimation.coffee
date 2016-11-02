@@ -66,8 +66,10 @@ type.defineMethods
       @_requestAnimationFrame()
       return
 
-    @_onUpdate @_valueAtProgress 1
-    @finish()
+    @_requestAnimationFrame =>
+      @_animationFrame = null
+      @_onUpdate @_valueAtProgress 1
+      @finish()
     return
 
 
