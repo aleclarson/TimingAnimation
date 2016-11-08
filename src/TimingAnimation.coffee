@@ -11,14 +11,14 @@ type = Type "TimingAnimation"
 type.inherits Animation
 
 type.defineOptions
-  endValue: Number.isRequired
+  toValue: Number.isRequired
   duration: Number.isRequired
   easing: Function.withDefault Easing.linear
   delay: Number.withDefault 0
 
 type.defineFrozenValues (options) ->
 
-  endValue: options.endValue
+  toValue: options.toValue
 
   duration: options.duration
 
@@ -49,31 +49,34 @@ type.defineGetters
 type.defineMethods
 
   _valueAtProgress: (progress) ->
-    @startValue + progress * (@endValue - @startValue)
+    @fromValue + progress * (@toValue - @fromValue)
 
   _progressAtTime: (time) ->
     return @easing 0 if time <= 0
     return @easing 1 if time >= @duration
     return @easing time / @duration
 
-  _start: (config) ->
-    @time = @startTime = Date.now()
-    @value = @startValue = config.startValue
+type.overrideMethods
 
-    @_delayTimer = null
+  _startAnimation: (animated) ->
+    if @delay is 0
+      @__super arguments
+    else if @_delayTimer
+      @_delayTimer = null
+      @__super arguments
+    else
+      @_delayTimer = Timer @delay, =>
+        @_startAnimation animated
 
+  __onAnimationStart: ->
+    @time = @startTime
+    @value = @fromValue
     if @duration > 0
-      @_requestAnimationFrame()
-      return
-
-    @_requestAnimationFrame =>
+    then @__super arguments
+    else @_requestAnimationFrame =>
       @_animationFrame = null
       @_onUpdate @_valueAtProgress 1
       @finish()
-    return
-
-
-type.overrideMethods
 
   __computeValue: ->
 
@@ -85,20 +88,26 @@ type.overrideMethods
     @progress = @_progressAtTime @time
     return @value = @_valueAtProgress @progress
 
-  __didStart: (config) ->
-    if @delay > 0
-      @_delayTimer = Timer @delay, => @_start config
-    else @_start config
-
-  __didUpdate: (value) ->
+  __onAnimationUpdate: (value) ->
     @finish() if @time is @duration
 
-  __didEnd: ->
+  __onAnimationEnd: ->
     return unless @_delayTimer
     @_delayTimer.prevent()
     @_delayTimer = null
 
   __captureFrame: ->
     { @value, @time, @progress }
+
+  __getNativeConfig: ->
+    frames = []
+    frameDuration = 1000 / 60
+    frameTime = 0
+    while frameTime < @duration
+      frames.push @easing frameTime / @duration
+      frameTime += frameDuration
+    if frameTime - @duration < 0.001
+      frames.push @easing 1
+    return {type: "frames", frames, @toValue}
 
 module.exports = type.build()
