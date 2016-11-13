@@ -76,7 +76,7 @@ type.overrideMethods
     else @_requestAnimationFrame =>
       @_animationFrame = null
       @_onUpdate @_valueAtProgress 1
-      @finish()
+      @stop yes
 
   __computeValue: ->
 
@@ -89,7 +89,8 @@ type.overrideMethods
     return @value = @_valueAtProgress @progress
 
   __onAnimationUpdate: (value) ->
-    @finish() if @time is @duration
+    if @time is @duration
+      @stop yes
 
   __onAnimationEnd: ->
     return unless @_delayTimer
