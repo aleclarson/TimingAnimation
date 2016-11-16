@@ -26,15 +26,15 @@ type.defineFrozenValues (options) ->
 
   delay: options.delay
 
-  _velocity: LazyVar => (@value - @_lastValue) / (@time - @_lastTime)
+  _velocity: @_initVelocity() unless options.useNativeDriver
 
 type.defineValues
 
-  progress: 0
+  _time: null
 
-  time: null
+  _value: null
 
-  value: null
+  _progress: 0
 
   _lastTime: null
 
@@ -44,17 +44,37 @@ type.defineValues
 
 type.defineGetters
 
-  velocity: -> @_velocity.get()
+  time: ->
+    if @_useNativeDriver
+    then @_computeTime()
+    else @_time
+
+  value: ->
+    if @_useNativeDriver
+    then @_valueAtProgress @easing @_computeTime() / @duration
+    else @_value
+
+  progress: ->
+    if @_useNativeDriver
+    then @easing @_computeTime() / @duration
+    else @_progress
+
+  velocity: ->
+    if @_useNativeDriver
+    then log.warn "Cannot access 'velocity' for native animations!"
+    else @_velocity.get()
 
 type.defineMethods
 
+  _initVelocity: ->
+    return LazyVar =>
+      (@_value - @_lastValue) / (@_time - @_lastTime)
+
+  _computeTime: ->
+    Math.min @duration, Date.now() - @startTime
+
   _valueAtProgress: (progress) ->
     @fromValue + progress * (@toValue - @fromValue)
-
-  _progressAtTime: (time) ->
-    return @easing 0 if time <= 0
-    return @easing 1 if time >= @duration
-    return @easing time / @duration
 
 type.overrideMethods
 
@@ -69,8 +89,8 @@ type.overrideMethods
         @_startAnimation animated
 
   __onAnimationStart: ->
-    @time = @startTime
-    @value = @fromValue
+    @_time = @startTime
+    @_value = @fromValue
     if @duration > 0
     then @__super arguments
     else @_requestAnimationFrame =>
@@ -80,16 +100,16 @@ type.overrideMethods
 
   __computeValue: ->
 
-    @_lastTime = @time
-    @_lastValue = @value
+    @_lastTime = @_time
+    @_lastValue = @_value
     @_velocity.reset()
 
-    @time = Math.min @duration, Date.now() - @startTime
-    @progress = @_progressAtTime @time
-    return @value = @_valueAtProgress @progress
+    @_time = @_computeTime()
+    @_progress = @easing @_time / @duration
+    return @_value = @_valueAtProgress @_progress
 
   __onAnimationUpdate: (value) ->
-    if @time is @duration
+    if @_time is @duration
       @stop yes
 
   __onAnimationEnd: ->
@@ -98,7 +118,9 @@ type.overrideMethods
     @_delayTimer = null
 
   __captureFrame: ->
-    { @value, @time, @progress }
+    time: @_time
+    value: @_value
+    progress: @_progress
 
   __getNativeConfig: ->
     frames = []
