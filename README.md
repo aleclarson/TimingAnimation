@@ -1,5 +1,5 @@
 
-# TimingAnimation 1.0.0 ![stable](https://img.shields.io/badge/stability-stable-4EBA0F.svg?style=flat)
+# TimingAnimation v1.1.0 ![stable](https://img.shields.io/badge/stability-stable-4EBA0F.svg?style=flat)
 
 An `Animation` subclass for `Easing`-based animations.
 
