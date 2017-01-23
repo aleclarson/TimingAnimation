@@ -1,102 +1,136 @@
 
-{ Animation } = require "Animated"
+{Animation} = require "Animated"
 
-fromArgs = require "fromArgs"
 LazyVar = require "LazyVar"
 Easing = require "easing"
+Timer = require "timer"
 Type = require "Type"
 
 type = Type "TimingAnimation"
 
 type.inherits Animation
 
-type.optionTypes =
-  endValue: Number
-  duration: Number
-  easing: Function
-  delay: Number
+type.defineOptions
+  toValue: Number.isRequired
+  duration: Number.isRequired
+  easing: Function.withDefault Easing.linear
+  delay: Number.withDefault 0
 
-type.optionDefaults =
-  easing: Easing "linear"
-  delay: 0
+type.defineFrozenValues (options) ->
 
-type.defineFrozenValues
+  toValue: options.toValue
 
-  endValue: fromArgs "endValue"
+  duration: options.duration
 
-  duration: fromArgs "duration"
+  easing: options.easing
 
-  easing: fromArgs "easing"
+  delay: options.delay
 
-  delay: fromArgs "delay"
-
-  _velocity: -> LazyVar =>
-    (@value - @_lastValue) / (@time - @_lastTime)
+  _velocity: @_initVelocity() unless options.useNativeDriver
 
 type.defineValues
 
-  progress: 0
+  _time: null
 
-  time: null
+  _value: null
 
-  value: null
-
-  _timer: null
+  _progress: 0
 
   _lastTime: null
 
   _lastValue: null
 
-type.exposeLazyGetters [
-  "velocity"
-]
+  _delayTimer: null
+
+type.defineGetters
+
+  time: ->
+    if @_useNativeDriver
+    then @_computeTime()
+    else @_time
+
+  value: ->
+    if @_useNativeDriver
+    then @_valueAtProgress @easing @_computeTime() / @duration
+    else @_value
+
+  progress: ->
+    if @_useNativeDriver
+    then @easing @_computeTime() / @duration
+    else @_progress
+
+  velocity: ->
+    if @_useNativeDriver
+    then log.warn "Cannot access 'velocity' for native animations!"
+    else @_velocity.get()
 
 type.defineMethods
 
-  computeValueAtProgress: (progress) ->
-    @startValue + progress * (@endValue - @startValue)
+  _initVelocity: ->
+    return LazyVar =>
+      (@_value - @_lastValue) / (@_time - @_lastTime)
 
-  computeProgressAtTime: (time) ->
-    return @easing 0 if time <= 0
-    return @easing 1 if time >= @duration
-    return @easing time / @duration
+  _computeTime: ->
+    Math.min @duration, Date.now() - @startTime
 
-  _start: ->
-
-    @_timer = null
-    if @duration is 0
-      @_onUpdate @computeValueAtProgress 1
-      @finish()
-      return
-
-    @startTime = Date.now()
-    @_requestAnimationFrame()
+  _valueAtProgress: (progress) ->
+    @fromValue + progress * (@toValue - @fromValue)
 
 type.overrideMethods
 
+  _startAnimation: (animated) ->
+    if @delay is 0
+      @__super arguments
+    else if @_delayTimer
+      @_delayTimer = null
+      @__super arguments
+    else
+      @_delayTimer = Timer @delay, =>
+        @_startAnimation animated
+
+  __onAnimationStart: ->
+    @_time = @startTime
+    @_value = @fromValue
+    if @duration > 0
+    then @__super arguments
+    else @_requestAnimationFrame =>
+      @_animationFrame = null
+      @_onUpdate @_valueAtProgress 1
+      @stop yes
+
   __computeValue: ->
 
-    @_lastTime = @time
-    @_lastValue = @value
+    @_lastTime = @_time
+    @_lastValue = @_value
     @_velocity.reset()
 
-    @time = Math.min @duration, Date.now() - @startTime
-    @progress = @computeProgressAtTime @time
-    return @value = @computeValueAtProgress @progress
+    @_time = @_computeTime()
+    @_progress = @easing @_time / @duration
+    return @_value = @_valueAtProgress @_progress
 
-  __didStart: ->
-    return @_start() if @delay <= 0
-    @_timer = Timer @delay, => @_start()
+  __onAnimationUpdate: (value) ->
+    if @_time is @duration
+      @stop yes
 
-  __didUpdate: (value) ->
-    @finish() if @time is @duration
-
-  __didEnd: ->
-    return unless @_timer
-    @_timer.prevent()
-    @_timer = null
+  __onAnimationEnd: ->
+    return unless @_delayTimer
+    @_delayTimer.prevent()
+    @_delayTimer = null
 
   __captureFrame: ->
-    { @progress, @value, @time }
+    time: @_time
+    value: @_value
+    progress: @_progress
+
+  __getNativeConfig: ->
+    frames = []
+    frameDuration = 1000 / 60
+    frameTime = 0
+    while frameTime < @duration
+      frames.push @easing frameTime / @duration
+      frameTime += frameDuration
+    if frameTime - @duration < 0.001
+      frames.push @easing 1
+    return {type: "frames", frames, @toValue}
 
 module.exports = type.build()
