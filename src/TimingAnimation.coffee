@@ -10,11 +10,18 @@ type = Type "TimingAnimation"
 
 type.inherits Animation
 
-type.defineOptions
-  toValue: Number.isRequired
-  duration: Number.isRequired
-  easing: Function.withDefault Easing.linear
-  delay: Number.withDefault 0
+type.defineArgs ->
+
+  required: yes
+  types:
+    toValue: Number
+    duration: Number
+    easing: Function
+    delay: Number
+
+  defaults:
+    easing: Easing.linear
+    delay: 0
 
 type.defineFrozenValues (options) ->
 
