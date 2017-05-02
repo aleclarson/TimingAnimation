@@ -1,7 +1,6 @@
 
 {Animation} = require "Animated"
 
-LazyVar = require "LazyVar"
 Easing = require "easing"
 Timer = require "timer"
 Type = require "Type"
@@ -33,8 +32,6 @@ type.defineFrozenValues (options) ->
 
   delay: options.delay
 
-  _velocity: @_initVelocity() unless options.useNativeDriver
-
 type.defineValues
 
   _time: null
@@ -42,10 +39,6 @@ type.defineValues
   _value: null
 
   _progress: 0
-
-  _lastTime: null
-
-  _lastValue: null
 
   _delayTimer: null
 
@@ -66,16 +59,7 @@ type.defineGetters
     then @easing @_computeTime() / @duration
     else @_progress
 
-  velocity: ->
-    if @_useNativeDriver
-    then log.warn "Cannot access 'velocity' for native animations!"
-    else @_velocity.get()
-
 type.defineMethods
-
-  _initVelocity: ->
-    return LazyVar =>
-      (@_value - @_lastValue) / (@_time - @_lastTime)
 
   _computeTime: ->
     Math.min @duration, Date.now() - @startTime
@@ -106,11 +90,6 @@ type.overrideMethods
       @stop yes
 
   __computeValue: ->
-
-    @_lastTime = @_time
-    @_lastValue = @_value
-    @_velocity.reset()
-
     @_time = @_computeTime()
     @_progress = @easing @_time / @duration
     return @_value = @_valueAtProgress @_progress
