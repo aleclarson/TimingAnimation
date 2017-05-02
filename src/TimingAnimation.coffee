@@ -1,8 +1,7 @@
 
 {Animation} = require "Animated"
+{mutable} = require "Property"
 
-LazyVar = require "LazyVar"
-Easing = require "easing"
 Timer = require "timer"
 Type = require "Type"
 
@@ -12,16 +11,15 @@ type.inherits Animation
 
 type.defineArgs ->
 
-  required: yes
+  required:
+    toValue: yes
+    duration: yes
+
   types:
     toValue: Number
     duration: Number
     easing: Function
     delay: Number
-
-  defaults:
-    easing: Easing.linear
-    delay: 0
 
 type.defineFrozenValues (options) ->
 
@@ -33,52 +31,22 @@ type.defineFrozenValues (options) ->
 
   delay: options.delay
 
-  _velocity: @_initVelocity() unless options.useNativeDriver
-
 type.defineValues
-
-  _time: null
-
-  _value: null
-
-  _progress: 0
-
-  _lastTime: null
-
-  _lastValue: null
 
   _delayTimer: null
 
 type.defineGetters
 
-  time: ->
-    if @_useNativeDriver
-    then @_computeTime()
-    else @_time
+  value: -> @_valueAtProgress @progress
 
-  value: ->
-    if @_useNativeDriver
-    then @_valueAtProgress @easing @_computeTime() / @duration
-    else @_value
+  elapsedTime: -> Date.now() - @startTime
 
   progress: ->
-    if @_useNativeDriver
-    then @easing @_computeTime() / @duration
-    else @_progress
-
-  velocity: ->
-    if @_useNativeDriver
-    then log.warn "Cannot access 'velocity' for native animations!"
-    else @_velocity.get()
+    progress = Math.min 1, @elapsedTime / @duration
+    return @easing progress if @easing
+    return progress
 
 type.defineMethods
-
-  _initVelocity: ->
-    return LazyVar =>
-      (@_value - @_lastValue) / (@_time - @_lastTime)
-
-  _computeTime: ->
-    Math.min @duration, Date.now() - @startTime
 
   _valueAtProgress: (progress) ->
     @fromValue + progress * (@toValue - @fromValue)
@@ -86,48 +54,51 @@ type.defineMethods
 type.overrideMethods
 
   _startAnimation: (animated) ->
-    if @delay is 0
-      @__super arguments
-    else if @_delayTimer
+
+    unless @_useNativeDriver
+      mutable.define this, "value", {value: @fromValue}
+      mutable.define this, "progress", {value: 0}
+
+    unless @delay
+      return @__super arguments
+
+    if @_delayTimer
       @_delayTimer = null
-      @__super arguments
-    else
-      @_delayTimer = Timer @delay, =>
-        @_startAnimation animated
+      return @__super arguments
+
+    @_delayTimer = Timer @delay, =>
+      @_startAnimation animated
+    return
 
   __onAnimationStart: ->
-    @_time = @startTime
-    @_value = @fromValue
+
     if @duration > 0
-    then @__super arguments
-    else @_requestAnimationFrame =>
+      return @__super arguments
+
+    @_requestAnimationFrame =>
       @_animationFrame = null
       @_onUpdate @_valueAtProgress 1
       @stop yes
+      return
 
   __computeValue: ->
-
-    @_lastTime = @_time
-    @_lastValue = @_value
-    @_velocity.reset()
-
-    @_time = @_computeTime()
-    @_progress = @easing @_time / @duration
-    return @_value = @_valueAtProgress @_progress
+    progress = Math.min 1, @elapsedTime / @duration
+    progress = @easing progress if @easing
+    @value = @_valueAtProgress progress
+    @progress = progress
+    return @value
 
   __onAnimationUpdate: (value) ->
-    if @_time is @duration
+    if value is @toValue
+      @_onUpdate value
       @stop yes
+      return
 
-  __onAnimationEnd: ->
-    return unless @_delayTimer
-    @_delayTimer.prevent()
-    @_delayTimer = null
-
-  __captureFrame: ->
-    time: @_time
-    value: @_value
-    progress: @_progress
+  __onAnimationEnd: (finished) ->
+    if @_delayTimer
+      @_delayTimer.prevent()
+      @_delayTimer = null
+      return
 
   __getNativeConfig: ->
     frames = []
