@@ -89,7 +89,8 @@ type.overrideMethods
     return @value
 
   __onAnimationUpdate: (value) ->
-    if @_time is @duration
+    if value is @toValue
+      @_onUpdate value
       @stop yes
       return
 
