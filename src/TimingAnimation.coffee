@@ -21,9 +21,6 @@ type.defineArgs ->
     easing: Function
     delay: Number
 
-  defaults:
-    delay: 0
-
 type.defineFrozenValues (options) ->
 
   toValue: options.toValue
@@ -67,19 +64,22 @@ type.overrideMethods
 
     if @_delayTimer
       @_delayTimer = null
-      @__super arguments
-    else
-      @_delayTimer = Timer @delay, =>
-        @_startAnimation animated
+      return @__super arguments
+
+    @_delayTimer = Timer @delay, =>
+      @_startAnimation animated
+    return
 
   __onAnimationStart: ->
 
     if @duration > 0
-    then @__super arguments
-    else @_requestAnimationFrame =>
+      return @__super arguments
+
+    @_requestAnimationFrame =>
       @_animationFrame = null
       @_onUpdate @_valueAtProgress 1
       @stop yes
+      return
 
   __computeValue: ->
     progress = Math.min 1, @elapsedTime / @duration
@@ -91,11 +91,13 @@ type.overrideMethods
   __onAnimationUpdate: (value) ->
     if @_time is @duration
       @stop yes
+      return
 
-  __onAnimationEnd: ->
-    return unless @_delayTimer
-    @_delayTimer.prevent()
-    @_delayTimer = null
+  __onAnimationEnd: (finished) ->
+    if @_delayTimer
+      @_delayTimer.prevent()
+      @_delayTimer = null
+      return
 
   __captureFrame: ->
     time: @_time
