@@ -100,11 +100,6 @@ type.overrideMethods
       @_delayTimer = null
       return
 
-  __captureFrame: ->
-    time: @_time
-    value: @_value
-    progress: @_progress
-
   __getNativeConfig: ->
     frames = []
     frameDuration = 1000 / 60
